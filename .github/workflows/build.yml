@@ -85,3 +85,130 @@ jobs:
           path: |
             target/dependency-check-report.html
             target/dependency-check-report.*
+
+  zap_baseline:
+    name: ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    needs: build-job
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-artifacts
+          path: ./app
+
+      - name: Prepare ZAP rules file
+        run: |
+          if [ -f zap-rules.tsv ]; then
+            cp zap-rules.tsv ./zap-rules.tsv
+          else
+            touch ./zap-rules.tsv
+          fi
+
+      - name: Set up JDK (для запуска приложения)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Start app in background
+        run: |
+          ls -la ./app
+          java -jar ./app/course-management-0.0.1-SNAPSHOT.jar &
+          echo $! > app.pid
+          sleep 30
+
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: "http://localhost:8080/"
+          rules_file_name: "zap-rules.tsv"
+          cmd_options: "-a"
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: "zap-baseline-internal"
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f app.pid ]; then kill $(cat app.pid) || true; fi
+
+      - name: Upload ZAP baseline reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: |
+            report_html.html
+            report_md.md
+            report_json.json
+          if-no-files-found: ignore
+
+  zap_api_scan:
+    name: ZAP API Scan
+    runs-on: ubuntu-latest
+    needs: build-job
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-artifacts
+          path: ./app
+
+      - name: Prepare ZAP rules file
+        run: |
+          if [ -f zap-rules.tsv ]; then
+            cp zap-rules.tsv ./zap-rules.tsv
+          else
+            touch ./zap-rules.tsv
+          fi
+
+      - name: Set up JDK (для запуска приложения)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Start app in background
+        run: |
+          ls -la ./app
+          java -jar ./app/course-management-0.0.1-SNAPSHOT.jar &
+          echo $! > app.pid
+          sleep 30
+
+      - name: Run ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          target: "http://localhost:8080/v3/api-docs"
+          format: "openapi"
+          rules_file_name: "zap-rules.tsv"
+          cmd_options: "-a"
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: "zap-api-internal"
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f app.pid ]; then kill $(cat app.pid) || true; fi
+
+      - name: Upload ZAP API reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-api-report
+          path: |
+            report_html.html
+            report_md.md
+            report_json.json
+          if-no-files-found: ignore
