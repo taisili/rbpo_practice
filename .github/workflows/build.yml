@@ -13,7 +13,7 @@ jobs:
   build-job:
     runs-on: ubuntu-latest
     container:
-      image: maven:3.9-eclipse-temurin-21
+      image: maven:3.9-eclipse-temurin-17
 
     steps:
       - name: Checkout repository
@@ -57,3 +57,34 @@ jobs:
         if: always()
         with:
           sarif_file: semgrep.sarif
+
+  dependency-check-sca:
+    name: OWASP Dependency-Check (SCA)
+    needs: build-job
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Run Dependency-Check
+        run: |
+          mvn -B org.owasp:dependency-check-maven:check \
+            -Dformat=HTML \
+            -DsuppressionFile=dependency-check-suppressions.xml \
+            -Danalyzer.ossindex.enabled=false \
+            -DfailBuildOnCVSS=11 \
+            -DdataDirectory=.dependency-check
+
+      - name: Upload Dependency-Check Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.html
