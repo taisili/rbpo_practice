@@ -4,6 +4,10 @@ name: Build with Maven
 #   pull_request:
 #     branches:
 #       - main # запускать только для PR в main
+on:
+  push:
+    branches:
+      - "**"
 
 jobs:
   build-job:
