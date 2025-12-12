@@ -32,3 +32,28 @@ jobs:
         with:
           name: jar-artifacts
           path: target/*.jar
+  semgrep-sast:
+    name: Semgrep SAST
+    needs: build-job
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep and generate SARIF report
+        run: |
+          semgrep scan --config auto --sarif -o semgrep.sarif
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
