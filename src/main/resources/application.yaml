@@ -27,3 +27,8 @@ server:
 app:
   plugin:
     url:
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
