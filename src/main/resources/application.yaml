@@ -6,7 +6,7 @@ spring:
       enabled: true
       path: /h2-console
       settings:
-        web-allow-others: true
+        web-allow-others: false
   datasource:
     url: jdbc:h2:mem:courseapp;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
@@ -20,10 +20,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "health,info"
 server:
   error:
-    include-stacktrace: ALWAYS
+    include-stacktrace: NEVER
 app:
   plugin:
     url:
