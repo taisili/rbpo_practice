@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
-    <!-- Пока без правил подавления, просто валидный файл -->
-</suppressions>
 
+    <!-- FP-01: dom4j уже обновлён (2.2.0), но DC иногда ошибочно матчит CVE через CPE -->
+    <suppress>
+        <notes><![CDATA[
+FP: dom4j в проекте используется версии 2.2.0 (уязвимость CVE-2020-10683 относится к старым версиям/неверному CPE матчингy).
+Если DC продолжит репортить CVE-2020-10683 на dom4j 2.2.0 — считаем это ложноположительным.
+        ]]></notes>
+        <packageUrl>pkg:maven/dom4j/dom4j@2.2.0</packageUrl>
+        <cve>CVE-2020-10683</cve>
+    </suppress>
+
+</suppressions>
