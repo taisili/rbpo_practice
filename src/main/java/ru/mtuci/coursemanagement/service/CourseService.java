@@ -1,45 +1,46 @@
 package ru.mtuci.coursemanagement.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.mtuci.coursemanagement.model.Course;
 import ru.mtuci.coursemanagement.repository.CourseRepository;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
+@Transactional
 public class CourseService {
-    private final CourseRepository repo;
-    private final JdbcTemplate jdbc;
 
-    public List<Course> findAll() {
-        return repo.findAll();
+    private final CourseRepository courseRepository;
+
+    public CourseService(CourseRepository courseRepository) {
+        this.courseRepository = courseRepository;
     }
 
-    public Course save(Course c) {
-        return repo.save(c);
-    }
-
-    public Course get(Long id) {
-        return repo.findById(id).orElse(null);
-    }
-
-    public void delete(Long id) {
-        repo.deleteById(id);
-    }
-
+    @Transactional(readOnly = true)
     public List<Course> searchByTitle(String title) {
-        String sql = "SELECT id, title, description, teacher_id FROM courses WHERE title = '" + title + "'";
-        RowMapper<Course> rm = (rs, i) -> new Course(
-                rs.getLong("id"),
-                rs.getString("title"),
-                rs.getString("description"),
-                rs.getLong("teacher_id")
-        );
-        return jdbc.query(sql, rm);
+        if (title == null || title.isBlank()) {
+            return List.of();
+        }
+        return courseRepository.findByTitleContainingIgnoreCase(title.trim());
+    }
 
+    @Transactional(readOnly = true)
+    public List<Course> findAll() {
+        return courseRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Course findById(Long id) {
+        return courseRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Course not found: id=" + id));
+    }
+
+    public Course save(Course course) {
+        return courseRepository.save(course);
+    }
+
+    public void deleteById(Long id) {
+        courseRepository.deleteById(id);
     }
 }

@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +19,9 @@ import java.util.Optional;
 @Controller
 @RequiredArgsConstructor
 public class AuthController {
+
     private final UserService users;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping("/login")
     public String loginPage() {
@@ -27,20 +30,26 @@ public class AuthController {
 
     @PostMapping("/login")
     public String doLogin(@RequestParam String username,
-                          @RequestParam String password,
-                          HttpServletRequest req,
-                          Model model) {
+            @RequestParam String password,
+            HttpServletRequest req,
+            Model model) {
+
         Optional<User> opt = users.findByUsername(username);
         if (opt.isPresent()) {
             User u = opt.get();
-            if (u.getPassword().equals(password)) {
-                log.info("User {} logged in with password {}", username, password);
+
+            // сравниваем введённый пароль с BCrypt-хэшом из БД
+            if (passwordEncoder.matches(password, u.getPassword())) {
+                log.info("User {} logged in successfully", username);
+
                 HttpSession s = req.getSession(true);
                 s.setAttribute("username", username);
                 s.setAttribute("role", u.getRole());
+
                 return "redirect:/";
             }
         }
+
         model.addAttribute("error", "Неверные учетные данные");
         return "login";
     }
@@ -48,15 +57,22 @@ public class AuthController {
     @GetMapping("/logout")
     public String logout(HttpServletRequest req) {
         HttpSession s = req.getSession(false);
-        if (s != null) s.invalidate();
+        if (s != null)
+            s.invalidate();
         return "redirect:/login";
     }
 
     @PostMapping("/register")
     public String register(@RequestParam String username,
-                           @RequestParam String password,
-                           @RequestParam(required = false, defaultValue = "STUDENT") String role) {
-        users.save(new User(null, username, password, role));
+            @RequestParam String password) {
+
+        // Роль фиксируем на сервере: пользователь не может выбрать себе привилегии
+        User u = new User(null, username, password, "STUDENT");
+
+        // пароль будет захэширован в UserService.save() (или можно закодировать прямо
+        // тут)
+        users.save(u);
+
         return "redirect:/login";
     }
 }
